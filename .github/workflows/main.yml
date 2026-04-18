@@ -37,8 +37,6 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-
-    
     steps:
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
@@ -49,5 +47,5 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           script: |
             cd /opt/corsa
-            docker-compose pull
-            docker-compose up -d --force-recreate
+            docker compose pull
+            docker compose up -d --force-recreate
