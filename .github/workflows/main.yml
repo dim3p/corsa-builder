@@ -16,6 +16,24 @@ jobs:
           repository: 'piratecash/corsa'
           ref: master
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get release tag from upstream repo
+        id: get_release
+        run: |
+          api_url="https://api.github.com/repos/piratecash/corsa/releases/latest"
+          echo "Fetching $api_url"
+          resp=$(curl -sSL -H "Accept: application/vnd.github+json" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "$api_url")
+          tag=$(echo "$resp" | jq -r '.tag_name // empty')
+          if [ -z "$tag" ]; then
+            # fallback to branch name if no releases
+            branch=$(git rev-parse --abbrev-ref HEAD || echo "master")
+            tag="branch-$branch"
+          fi
+          # sanitize tag (remove leading 'v' if desired) — uncomment if needed:
+          # tag=${tag#v}
+          echo "release_tag=$tag" >> $GITHUB_OUTPUT
       
       # Собираем образ
       - name: Set up Docker Buildx
@@ -32,7 +50,9 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/corsa-node:latest
+          tags: |
+            ${{ secrets.DOCKER_HUB_USERNAME }}/corsa-node:${{ steps.get_release.outputs.release_tag }}
+            ${{ secrets.DOCKER_HUB_USERNAME }}/corsa-node:latest
   
   deploy:
     needs: build
